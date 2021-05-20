@@ -1,0 +1,238 @@
+
+
+import React, { Component } from 'react';
+import Login from './Login'
+import {
+  Button,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
+} from 'react-native';
+
+import firestore, { firebase } from '@react-native-firebase/firestore';
+import auth from '@react-native-firebase/auth'
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+
+
+// GoogleSignin.configure({
+//   webClientId: '455977607791-jn6f89u7u3pcipisdp1kaqdtgdk6l0s9.apps.googleusercontent.com',
+// });
+
+
+class App extends Component {
+  // componentDidMount(){
+  //   auth()
+  // .signInAnonymously()
+  // .then(() => {
+  //   console.log('User signed in anonymously');
+  // })
+  // .catch(error => {
+  //   if (error.code === 'auth/operation-not-allowed') {
+  //     console.log('Enable anonymous in your firebase console.');
+  //   }
+
+  //   console.error(error);
+  // });
+
+  // }
+  createUser = () => {
+    auth()
+      .signInWithEmailAndPassword( 'zainab@example.com', 'SuperSecretPassword!' )
+      .then( () => {
+        console.log( 'User account created & signed in!' );
+      } )
+      .catch( error => {
+        if ( error.code === 'auth/email-already-in-use' ) {
+          console.log( 'That email address is already in use!' );
+        }
+
+        if ( error.code === 'auth/invalid-email' ) {
+          console.log( 'That email address is invalid!' );
+        }
+
+        console.error( error );
+      } );
+  }
+  logoff =()=>{
+    auth()
+  .signOut()
+  .then(() => console.log('User signed out!'));
+  }
+  state = {
+    // user:{
+    //   name:""
+    // }
+    users: []
+  }
+  constructor ( props ) {
+    super( props );
+    // this.getuser();
+    // this.getusers();
+    // this.subscriber = firestore().collection("users").doc("CdBGeKSRhRtatxT3XYtf").onSnapshot(doc=>{
+    //   this.setState({
+    //     user:{
+    //       name:doc.data().name
+    //     }
+    //   })
+    // })
+
+    //   firestore()
+    // .collection('users')
+    // .get()
+    // .then(querySnapshot => {
+    //   // console.log('Total users: ', querySnapshot.size);
+
+    //   querySnapshot.forEach(documentSnapshot => {
+    //     // console.log('User ID: ', documentSnapshot.id, documentSnapshot.data());
+    //   });
+    // });
+    // }
+    // getuser = async () =>{
+    //   const userdocument = await firestore().collection("users").doc("CdBGeKSRhRtatxT3XYtf").get()
+    //   // console.log(userdocument)
+    // }
+
+    // getusers = async () =>{
+    //  const userdata= firestore().collection('users')
+    // .where('age', '<=', 18)
+    // .get()
+    //   console.log('usersdata',userdata);
+
+    this.subscriber =
+      firestore().collection( "users" ).onSnapshot( doc => {
+        let users = []
+        doc.forEach( doc => {
+          // users.push( doc.data())
+          // users.push(doc.id)
+          users.push({"id":doc.id ,"name":doc.data().name,"age":doc.data().age})
+        } );
+        this.setState( { users } )
+        // console.log(users)
+      } )
+  }
+
+  onPostLike = ( postId ) => {
+    // Create a reference to the post
+    const userReference = firestore().doc( `users/${ "6AwpqsJ3erf3TLZz492f" }` );
+
+    return firestore().runTransaction( async transaction => {
+      // Get post data first
+      const postSnapshot = await transaction.get( userReference );
+
+      if ( !postSnapshot.exists ) {
+        throw 'user does not exist!';
+      }
+
+      await transaction.update( userReference, {
+        age: postSnapshot.data().age + 1,
+      } );
+    } );
+  }
+  massDeleteUsers = async () => {
+    // Get all users
+    const usersQuerySnapshot = await firestore()
+      .collection( 'users' )
+      .get();
+
+    // Create a new batch instance
+    const batch = firestore().batch();
+
+    usersQuerySnapshot.forEach( documentSnapshot => {
+      batch.delete( documentSnapshot.ref );
+    } )
+
+    batch.commit();
+  }
+
+  addRandomUser = async () => {
+    let name = Math.random().toString( 36 ).substring( 7 )
+    firestore().collection( 'users' ).add( {
+      name,
+      age: 20,
+    } )
+    console.log( "click me" );
+  }
+  // onGoogleButtonPress =async()=> {
+  //   // Get the users ID token
+  //   const { idToken } = await GoogleSignin.signIn();
+  
+  //   // Create a Google credential with the token
+  //   const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+  
+  //   // Sign-in the user with the credential
+  //   return auth().signInWithCredential(googleCredential);
+  // }
+  addage = (id)=>{
+      console.log("click me");
+      console.log(id)
+      const userReference = firestore().doc( `users/${id}` );
+
+    return firestore().runTransaction( async transaction => {
+      // Get post data first
+      const postSnapshot = await transaction.get( userReference );
+
+      if ( !postSnapshot.exists ) {
+        throw 'user does not exist!';
+      }
+
+      await transaction.update( userReference, {
+        age: postSnapshot.data().age + 1,
+      } );
+    } );
+  }
+  delete =async (id)=>{
+    firestore()
+  .collection('users')
+  .doc(id)
+  .delete()
+  .then(() => {
+    console.log('User deleted!');
+  });
+    console.log(id)
+ 
+  }
+
+  render() {
+    return (
+      <View style={{ margin: 20,padding:20 }}>
+        {/* <Login /> */}
+        {/* <Text>Hello {this.state.user.name}</Text> */}
+        {/* <Text>Hello</Text> */}
+
+        <Button title="Add Random user" onPress={this.addRandomUser} />
+        {/* <Button title="Add age" onPress={this.onPostLike} /> */}
+        {/* <Button title="Delete" onPress={this.massDeleteUsers} /> */}
+        {/* {/* <Button title="Createuser" onPress={this.createUser} /> */}
+        {/* <Button title="Logoff" onPress={this.Logoff} /> */} 
+
+        {
+          this.state.users.map( ( user, index ) =>
+            <View key={index}>
+              <Text style={{margin:20}}>name=: {user.name} age: {user.age} </Text>
+              <Button title="add age" onPress={()=> this.addage(user.id)} />
+              <Button title="Delete" onPress={()=> this.delete(user.id)} />
+            </View>
+          )
+        }
+      </View>
+    )
+  }
+
+};
+export default App;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    marginHorizontal: 16,
+  },
+  title: {
+    textAlign: 'center',
+    marginVertical: 8,
+    // padding:10,
+    
+  }})
